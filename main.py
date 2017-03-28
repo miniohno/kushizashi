@@ -1,5 +1,6 @@
 import asyncio
 from collections import defaultdict
+import itertools
 from pprint import pprint
 
 import aiohttp
@@ -68,25 +69,29 @@ class GitHubFetcher(BaseFetcher):
   async def start_fetching(self, *args):
     await super().start_fetching(*args)
 
-    resp = await self.session.get(
-      'https://api.github.com/orgs/glucoseinc/repos',
-      headers=self.headers
-    )
-    repositories = await resp.json()
+    repositories = await self.fetch_all_pages('https://api.github.com/orgs/glucoseinc/repos')
     await asyncio.wait(map(self.fetch_issues, repositories))
 
   async def fetch_issues(self, repository):
     print('fetching its issues:', repository['id'])
 
-    resp = await self.session.get(
-      repository['issues_url'].replace('{/number}', ''),
-      headers=self.headers
-    )
-    issues = await resp.json()
+    issues = await self.fetch_all_pages(repository['issues_url'].replace('{/number}', ''))
 
     for issue in issues:
       for assignee in issue['assignees']:
         self.register(assignee['login'], (repository['name'], issue['title'], issue['html_url']))
+
+  async def fetch_all_pages(self, url):
+    per_page = 100
+    fetched = []
+
+    for page in itertools.count(1):
+      resp = await self.session.get(url, headers=self.headers, params={'page': page, 'per_page': per_page})
+      decoded = await resp.json()
+      fetched += decoded
+
+      if per_page > len(decoded):
+        return fetched
 
 
 async def fetch_parallelly(*fetchers):
