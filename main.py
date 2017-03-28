@@ -46,3 +46,32 @@ class PivotalFetcher:
       self.result_container[owner['username']].append('https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
 
 
+class GitHubFetcher:
+  def __init__(self, token):
+    self.token = token
+
+  async def start_fetching(self, session, result_container):
+    self.session = session
+    self.result_container = result_container
+    await self.fetch_repositories()
+
+  async def fetch_repositories(self):
+    resp = await self.session.get(
+      'https://api.github.com/orgs/glucoseinc/repos',
+      headers={'Authorization': 'token {}'.format(self.token)}
+    )
+    repositories = await resp.json()
+    await asyncio.wait(map(self.fetch_issues, repositories))
+
+  async def fetch_issues(self, repository):
+    print('fetching its issues:', repository['id'])
+
+    resp = await self.session.get(
+      repository['issues_url'].replace('{/number}', ''),
+      headers={'Authorization': 'token {}'.format(self.token)}
+    )
+    issues = await resp.json()
+
+    for issue in issues:
+      for assignee in issue['assignees']:
+        self.result_container[assignee['login']].append(issue['html_url'])
