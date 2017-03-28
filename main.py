@@ -55,7 +55,10 @@ class PivotalFetcher(BaseFetcher):
     owners = await resp.json()
 
     for owner in owners:
-      self.register(owner['username'], 'https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
+      self.register(
+        owner['username'],
+        (story['name'], 'https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
+      )
 
 
 class GitHubFetcher(BaseFetcher):
@@ -83,7 +86,7 @@ class GitHubFetcher(BaseFetcher):
 
     for issue in issues:
       for assignee in issue['assignees']:
-        self.register(assignee['login'], issue['html_url'])
+        self.register(assignee['login'], (issue['title'], issue['html_url']))
 
 
 async def fetch_parallelly(*fetchers):
