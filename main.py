@@ -41,7 +41,8 @@ class PivotalFetcher(BaseFetcher):
 
     resp = await self.session.get(
       'https://www.pivotaltracker.com/services/v5/projects/{}/stories'.format(project['id']),
-      headers=self.headers
+      headers=self.headers,
+      params={'limit': 10000}
     )
     stories = await resp.json()
     await asyncio.wait([self.fetch_owners(project, story) for story in stories])
