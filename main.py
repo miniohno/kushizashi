@@ -111,6 +111,7 @@ async def fetch_parallelly(*fetchers):
 @click.option('--github-token', type=click.STRING, required=True)  # can be taken from github.com/settings/tokens
 @click.option('--pivotal-token', type=click.STRING, required=True)  # can be taken from pivotaltracker.com/profile
 def main(github_token, pivotal_token):
+  """与えられたトークンで見れる範囲のものしか探索しない."""
   github = GitHubFetcher(github_token)
   pivotal = PivotalFetcher(pivotal_token)
 
