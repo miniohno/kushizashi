@@ -1,50 +1,48 @@
+import asyncio
 from collections import defaultdict
 from pprint import pprint
 
+import aiohttp
 import click
-from github import Github
-import requests
 
 
-class AssigneesChecker:
-  def __init__(self):
-    self.assignees = defaultdict(list)
+class PivotalFetcher:
+  def __init__(self, token):
+    self.token = token
 
-  def fetch_github(self, username, password):
-    for repo in Github(username, password).get_organization('glucoseinc').get_repos():
-      for issue in repo.get_issues():
-        for assignee in issue.assignees:
-          self.assignees[assignee.login].append((issue.title, issue.html_url))
+  async def start_fetching(self, session, result_container):
+    self.session = session
+    self.result_container = result_container
+    await self.fetch_projects()
 
-  def fetch_pivotal(self, token):
-    projects = requests.get(
+  async def fetch_projects(self):
+    resp = await self.session.get(
       'https://www.pivotaltracker.com/services/v5/projects',
-      headers={'X-TrackerToken': token}
-    ).json()
-    for project in projects:
-      stories = requests.get(
-        'https://www.pivotaltracker.com/services/v5/projects/{}/stories'.format(project['id']),
-        headers={'X-TrackerToken': token}
-      ).json()
-      for story in stories:
-        owners = requests.get(
-          'https://www.pivotaltracker.com/services/v5/projects/{}/stories/{}/owners'.format(project['id'], story['id']),
-          headers={'X-TrackerToken': token}
-        ).json()
-        for owner in owners:
-          self.assignees[owner['username']].append('https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
+      headers={'X-TrackerToken': self.token}
+    )
+    projects = await resp.json()
+    await asyncio.wait(map(self.fetch_stories, projects))
+
+  async def fetch_stories(self, project):
+    print('fetching its stories:', project['id'])
+
+    resp = await self.session.get(
+      'https://www.pivotaltracker.com/services/v5/projects/{}/stories'.format(project['id']),
+      headers={'X-TrackerToken': self.token}
+    )
+    stories = await resp.json()
+    await asyncio.wait(map(self.fetch_owners, stories))
+
+  async def fetch_owners(self, story):
+    print('fetching its owners:', story['id'])
+
+    resp = await self.session.get(
+      'https://www.pivotaltracker.com/services/v5/projects/{}/stories/{}/owners'.format(story['project_id'], story['id']),
+      headers={'X-TrackerToken': self.token}
+    )
+    owners = await resp.json()
+
+    for owner in owners:
+      self.result_container[owner['username']].append('https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
 
 
-@click.command()
-@click.option('--github-user', type=click.STRING, required=True)  # of GitHub
-@click.option('--github-pass', prompt=True, hide_input=True, required=True)
-@click.option('--pivotal-token', type=click.STRING)  # can be taken from pivotaltracker.com/profile
-def main(github_user, github_pass, pivotal_token):
-  checker = AssigneesChecker()
-  checker.fetch_github(github_user, github_pass)
-  checker.fetch_pivotal(pivotal_token)
-  pprint(checker.assignees)
-
-
-if __name__ == '__main__':
-    main()
