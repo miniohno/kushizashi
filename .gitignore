@@ -1,0 +1,35 @@
+/.pyvenv
+/.enter.zsh
+/.leave.zsh
+note.md
+.tern-port
+
+
+### https://raw.github.com/github/gitignore/a5481c9e3a7ad99474107720058556d62e9419ca/Global/macos.gitignore
+
+*.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two 
+Icon
+
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
