@@ -75,3 +75,30 @@ class GitHubFetcher:
     for issue in issues:
       for assignee in issue['assignees']:
         self.result_container[assignee['login']].append(issue['html_url'])
+
+
+async def fetch_parallelly(*fetchers):
+  result_container = defaultdict(list)
+
+  async with aiohttp.ClientSession() as session:
+    await asyncio.wait([
+      fetcher.start_fetching(session, result_container)
+      for fetcher in fetchers
+    ])
+
+  return dict(result_container)
+
+
+@click.command()
+@click.option('--github-token', type=click.STRING, required=True)  # can be taken from github.com/settings/tokens
+@click.option('--pivotal-token', type=click.STRING, required=True)  # can be taken from pivotaltracker.com/profile
+def main(github_token, pivotal_token):
+  github = GitHubFetcher(github_token)
+  pivotal = PivotalFetcher(pivotal_token)
+
+  assignees = asyncio.get_event_loop().run_until_complete(fetch_parallelly(github, pivotal))
+  pprint(assignees)
+
+
+if __name__ == '__main__':
+  main()
