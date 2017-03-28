@@ -8,7 +8,7 @@ import click
 
 class PivotalFetcher:
   def __init__(self, token):
-    self.token = token
+    self.headers = {'X-TrackerToken': token}
 
   async def start_fetching(self, session, result_container):
     self.session = session
@@ -18,7 +18,7 @@ class PivotalFetcher:
   async def fetch_projects(self):
     resp = await self.session.get(
       'https://www.pivotaltracker.com/services/v5/projects',
-      headers={'X-TrackerToken': self.token}
+      headers=self.headers
     )
     projects = await resp.json()
     await asyncio.wait(map(self.fetch_stories, projects))
@@ -28,7 +28,7 @@ class PivotalFetcher:
 
     resp = await self.session.get(
       'https://www.pivotaltracker.com/services/v5/projects/{}/stories'.format(project['id']),
-      headers={'X-TrackerToken': self.token}
+      headers=self.headers
     )
     stories = await resp.json()
     await asyncio.wait(map(self.fetch_owners, stories))
@@ -38,7 +38,7 @@ class PivotalFetcher:
 
     resp = await self.session.get(
       'https://www.pivotaltracker.com/services/v5/projects/{}/stories/{}/owners'.format(story['project_id'], story['id']),
-      headers={'X-TrackerToken': self.token}
+      headers=self.headers
     )
     owners = await resp.json()
 
@@ -48,7 +48,7 @@ class PivotalFetcher:
 
 class GitHubFetcher:
   def __init__(self, token):
-    self.token = token
+    self.headers = {'Authorization': 'token ' + token}
 
   async def start_fetching(self, session, result_container):
     self.session = session
@@ -58,7 +58,7 @@ class GitHubFetcher:
   async def fetch_repositories(self):
     resp = await self.session.get(
       'https://api.github.com/orgs/glucoseinc/repos',
-      headers={'Authorization': 'token {}'.format(self.token)}
+      headers=self.headers
     )
     repositories = await resp.json()
     await asyncio.wait(map(self.fetch_issues, repositories))
@@ -68,7 +68,7 @@ class GitHubFetcher:
 
     resp = await self.session.get(
       repository['issues_url'].replace('{/number}', ''),
-      headers={'Authorization': 'token {}'.format(self.token)}
+      headers=self.headers
     )
     issues = await resp.json()
 
