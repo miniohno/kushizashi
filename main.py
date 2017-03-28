@@ -43,9 +43,9 @@ class PivotalFetcher(BaseFetcher):
       headers=self.headers
     )
     stories = await resp.json()
-    await asyncio.wait(map(self.fetch_owners, stories))
+    await asyncio.wait([self.fetch_owners(project, story) for story in stories])
 
-  async def fetch_owners(self, story):
+  async def fetch_owners(self, project, story):
     print('fetching its owners:', story['id'])
 
     resp = await self.session.get(
@@ -57,7 +57,7 @@ class PivotalFetcher(BaseFetcher):
     for owner in owners:
       self.register(
         owner['username'],
-        (story['name'], 'https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
+        (project['name'], story['name'], 'https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
       )
 
 
@@ -86,7 +86,7 @@ class GitHubFetcher(BaseFetcher):
 
     for issue in issues:
       for assignee in issue['assignees']:
-        self.register(assignee['login'], (issue['title'], issue['html_url']))
+        self.register(assignee['login'], (repository['name'], issue['title'], issue['html_url']))
 
 
 async def fetch_parallelly(*fetchers):
