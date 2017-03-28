@@ -6,16 +6,28 @@ import aiohttp
 import click
 
 
-class PivotalFetcher:
-  def __init__(self, token):
-    self.headers = {'X-TrackerToken': token}
+SAME_PERSON = {
+  'tanigawa': 'oblique1121',
+  'manabumatsuura': 'm-matsuura'
+}
 
+
+class BaseFetcher:
   async def start_fetching(self, session, result_container):
     self.session = session
     self.result_container = result_container
-    await self.fetch_projects()
 
-  async def fetch_projects(self):
+  def register(self, assignee, value):
+    self.result_container[SAME_PERSON.get(assignee, assignee)].append(value)
+
+
+class PivotalFetcher(BaseFetcher):
+  def __init__(self, token):
+    self.headers = {'X-TrackerToken': token}
+
+  async def start_fetching(self, *args):
+    await super().start_fetching(*args)
+
     resp = await self.session.get(
       'https://www.pivotaltracker.com/services/v5/projects',
       headers=self.headers
@@ -43,19 +55,16 @@ class PivotalFetcher:
     owners = await resp.json()
 
     for owner in owners:
-      self.result_container[owner['username']].append('https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
+      self.register(owner['username'], 'https://www.pivotaltracker.com/story/show/{}'.format(story['id']))
 
 
-class GitHubFetcher:
+class GitHubFetcher(BaseFetcher):
   def __init__(self, token):
     self.headers = {'Authorization': 'token ' + token}
 
-  async def start_fetching(self, session, result_container):
-    self.session = session
-    self.result_container = result_container
-    await self.fetch_repositories()
+  async def start_fetching(self, *args):
+    await super().start_fetching(*args)
 
-  async def fetch_repositories(self):
     resp = await self.session.get(
       'https://api.github.com/orgs/glucoseinc/repos',
       headers=self.headers
@@ -74,7 +83,7 @@ class GitHubFetcher:
 
     for issue in issues:
       for assignee in issue['assignees']:
-        self.result_container[assignee['login']].append(issue['html_url'])
+        self.register(assignee['login'], issue['html_url'])
 
 
 async def fetch_parallelly(*fetchers):
